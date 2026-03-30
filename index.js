@@ -1,8 +1,16 @@
+const http = require("http");
 const TelegramBot = require("node-telegram-bot-api");
 const Anthropic = require("@anthropic-ai/sdk").default;
 const { generatePostImage, generateStoryImage, generateVideo, cleanupTempDir, BRAND } = require("./media");
 const fs = require("fs");
 const path = require("path");
+
+// Health check server for DigitalOcean
+const PORT = process.env.PORT || 8080;
+http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end("OK");
+}).listen(PORT, () => console.log(`Health check on :${PORT}`));
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
