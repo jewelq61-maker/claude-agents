@@ -1,0 +1,26 @@
+name: wardaty-agents
+region: fra
+workers:
+  - name: telegram-bots
+    dockerfile_path: Dockerfile
+    github:
+      repo: jewelq61-maker/claude-agents
+      branch: main
+      deploy_on_push: true
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    envs:
+      - key: ANTHROPIC_API_KEY
+        value: "SET_IN_DIGITALOCEAN"
+        type: SECRET
+      - key: BOT_DEV_TOKEN
+        value: "SET_IN_DIGITALOCEAN"
+        type: SECRET
+      - key: BOT_DESIGN_TOKEN
+        value: "SET_IN_DIGITALOCEAN"
+        type: SECRET
+      - key: BOT_MARKETING_TOKEN
+        value: "SET_IN_DIGITALOCEAN"
+        type: SECRET
+      - key: NODE_ENV
+        value: "production"
