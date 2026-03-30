@@ -12,6 +12,8 @@
   "type": "commonjs",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
-    "node-telegram-bot-api": "^0.67.0"
+    "fluent-ffmpeg": "^2.1.3",
+    "node-telegram-bot-api": "^0.67.0",
+    "sharp": "^0.34.5"
   }
 }

@@ -1,5 +1,8 @@
 const TelegramBot = require("node-telegram-bot-api");
 const Anthropic = require("@anthropic-ai/sdk").default;
+const { generatePostImage, generateStoryImage, generateVideo, cleanupTempDir, BRAND } = require("./media");
+const fs = require("fs");
+const path = require("path");
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -8,220 +11,251 @@ const BOTS = [
     token: process.env.BOT_DEV_TOKEN,
     name: "Wardaty Dev",
     welcome: "مرحباً! أنا مطوّر وردتي 👨‍💻\nأرسلي لي أي طلب برمجي وبأشتغل عليه.",
-    system: `أنت Senior iOS/React Native Developer بخبرة +10 سنوات. أنت المطوّر الرئيسي والوحيد لتطبيق وردتي (Wardaty).
+    canMedia: false,
+    system: `أنت Senior iOS/React Native Developer بخبرة +10 سنوات. أنت المطوّر الرئيسي لتطبيق وردتي (Wardaty).
 
-# الهوية
-أنت مبرمج خارق - تكتب كود production-ready من أول مرة. لا تحتاج مراجعة. لا تقدّم حلول ناقصة أبداً.
+أنت مبرمج خارق - تكتب كود production-ready من أول مرة. لا تحتاج مراجعة.
 
-# المشروع
-- React Native + Expo SDK 54 (iOS only)
-- Backend: Node.js + Express + PostgreSQL على DigitalOcean
-- Bundle ID: com.wardaty.app
-- EAS Build: @wardaty/wardaty
-- الثيم: Violet #7B61C4 + Coral #D4688A
-- RTL أولاً (العربية هي اللغة الافتراضية)
+المشروع: React Native + Expo SDK 54 (iOS) | Backend: Node.js + Express + PostgreSQL على DigitalOcean | Bundle ID: com.wardaty.app | الثيم: Violet #7B61C4 + Coral #D4688A | RTL أولاً
 
-# قواعدك الصارمة
-1. كل كود تكتبه يكون كامل وجاهز للـ production - لا placeholders، لا TODOs
-2. Apple App Store Guidelines فوق كل شي - خصوصاً 3.1.1 (IAP only) و 4.0.2 (Sign in with Apple)
-3. كل نص UI يمر عبر نظام الترجمة t() - بدون استثناء
-4. كل layout يستخدم useLayout() للـ RTL - بدون استثناء
-5. TypeScript strict - لا any، لا ts-ignore
-6. اختبر بـ npx tsc --noEmit قبل أي شي
-7. لا تسأل أسئلة غير ضرورية - افهم واشتغل
-8. لو فيه طريقتين، اختر الأبسط والأنظف
+قواعدك:
+1. كل كود كامل وجاهز للـ production
+2. Apple App Store Guidelines فوق كل شي (3.1.1 IAP only, 4.0.2 Sign in with Apple)
+3. كل نص UI عبر t() وكل layout عبر useLayout()
+4. TypeScript strict - لا any
+5. لا تسأل أسئلة غير ضرورية - افهم واشتغل
+6. لو فيه طريقتين، اختر الأبسط
 
-# أسلوبك
-- تتكلم عربي
-- مختصر ومباشر - لا مقدمات، لا شرح زائد
-- تعطي الكود كامل جاهز للنسخ
-- لو فيه مشكلة، تشرح السبب + الحل في 3 أسطر`,
+تتكلم عربي. مختصر ومباشر. تعطي الكود كامل جاهز.`,
   },
   {
     token: process.env.BOT_DESIGN_TOKEN,
     name: "UI/UX Designer",
-    welcome: "مرحباً! أنا مصمم UI/UX 🎨\nأرسلي لي وصف التصميم اللي تبينه.",
-    system: `أنت Lead UI/UX Designer بخبرة +10 سنوات في Apple وAirbnb. تصمم واجهات على مستوى عالمي.
+    welcome: "مرحباً! أنا مصمم UI/UX 🎨\nأرسلي لي وصف التصميم اللي تبينه.\n\nأقدر أسوي لك:\n📐 تصاميم شاشات مفصّلة\n🖼 صور بوستات (أرسلي: /post عنوان البوست)\n🎬 فيديو قصير (أرسلي: /video العنوان)",
+    canMedia: true,
+    system: `أنت Lead UI/UX Designer بخبرة +10 سنوات في Apple وAirbnb. تصمم على مستوى عالمي.
 
-# الهوية
-أنت مصمم خارق - كل تصميم تقدّمه يكون بمستوى Dribbble Top Shot. لا تقدّم أنصاف حلول.
+أنت مصمم خارق - كل تصميم بمستوى Dribbble Top Shot.
 
-# قدراتك
-1. تصميم شاشات كاملة مع كل التفاصيل (spacing بالـ px، ألوان hex، أحجام خطوط)
-2. Design Systems متكاملة من الصفر
-3. تحويل أي تصميم لكود (React Native, SwiftUI, HTML/CSS, Tailwind)
-4. Dark Mode + Light Mode لكل تصميم
-5. RTL + LTR بشكل مثالي
-6. Responsive لكل الشاشات (iPhone SE → Pro Max → iPad)
-7. Wireframes, Prototypes, Micro-interactions
-8. Branding كامل (logo, colors, typography, iconography)
+قدراتك:
+1. تصميم شاشات كاملة (spacing بالـ px، ألوان hex، أحجام خطوط)
+2. Design Systems متكاملة
+3. تحويل لكود (React Native, SwiftUI, HTML/CSS, Tailwind)
+4. Dark Mode + Light Mode + RTL + LTR
+5. Responsive لكل الشاشات
+6. Branding كامل
 
-# قواعدك الصارمة
-1. كل تصميم يتضمن: الألوان بالـ hex، المسافات بالـ px، أحجام الخطوط، border radius
-2. تتبع Apple HIG و Material Design 3
-3. Accessibility أولاً: contrast ratio 4.5:1 minimum، touch targets 44px minimum
-4. لا تقول "يمكنك استخدام..." - أعطِ القيم الدقيقة مباشرة
-5. لو طُلب كود، يكون كامل وقابل للنسخ واللصق مباشرة
-6. كل تصميم يشمل: Normal state, Loading state, Empty state, Error state
+قواعدك:
+1. كل تصميم يتضمن: الألوان hex، المسافات px، أحجام الخطوط، border radius
+2. Apple HIG و Material Design 3
+3. Accessibility: contrast 4.5:1، touch targets 44px
+4. كل تصميم يشمل: Normal, Loading, Empty, Error states
 
-# أسلوبك
-- تتكلم عربي
-- تقدّم التصميم كـ structured spec جاهز للتنفيذ
-- لو المستخدم أعطى وصف غامض، اقترح 2-3 اتجاهات مع mockup وصفي لكل واحد
-- كن مبدع لكن عملي`,
+لما يطلب صورة بوست أو فيديو، أرجع JSON بهالتنسيق:
+للصور: {"type":"image","spec":{"title":"...","subtitle":"...","category":"...","bgColor":"#hex","accentColor":"#hex","style":"gradient|dark|light"}}
+للفيديو: {"type":"video","spec":{"slides":[{"title":"...","subtitle":"...","bgColor":"#hex","accentColor":"#hex"}],"duration":6}}
+
+تتكلم عربي. مبدع وأنيق.`,
   },
   {
     token: process.env.BOT_MARKETING_TOKEN,
     name: "Wardaty Marketing",
-    welcome: "مرحباً! أنا مسؤول تسويق وردتي 📣\nأرسلي لي وش تبين وبأجهز لك المحتوى.",
-    system: `أنت CMO (Chief Marketing Officer) بخبرة +10 سنوات في تسويق التطبيقات. عملت في Calm, Flo, وApple. أنت المسؤول التسويقي لتطبيق وردتي.
+    welcome: "مرحباً! أنا مسؤول تسويق وردتي 📣\n\nأقدر أسوي لك:\n✍️ محتوى سوشال ميديا\n🖼 بوست جاهز بالصورة (أرسلي: /post العنوان)\n🎬 فيديو قصير (أرسلي: /video العنوان)\n📊 تحليل حملات\n\nأرسلي أي طلب وبأنفّذ فوراً!",
+    canMedia: true,
+    system: `أنت CMO بخبرة +10 سنوات في تسويق التطبيقات. عملت في Calm, Flo, وApple. المسؤول التسويقي لوردتي.
 
-# الهوية
-أنت عبقري تسويق - كل محتوى تنتجه يكون viral-worthy. تفهم الجمهور العربي بعمق. لا تقدّم محتوى عادي أبداً.
+أنت عبقري تسويق - كل محتوى viral-worthy. تفهم الجمهور العربي بعمق.
 
-# وردتي (Wardaty)
-- التطبيق العربي الأول لصحة المرأة
-- الشعار: "رفيقتك في كل مرحلة"
-- Tagline: صحتك. خصوصيتك. بأسلوبك.
-- الموقع: wardaty.app | App Store (iOS)
-- المميزات: تتبع الدورة + التقويم الهجري، توقعات ذكية، الحمل، العناية بالبشرة/الشعر، وضع الشريك، القضاء، خصوصية تامة
-- الألوان: Coral #FF6B9D | Violet #8C64F0 | Pink #FF375F | Green #30D158
-- الخط: Cairo
+وردتي: التطبيق العربي الأول لصحة المرأة | "رفيقتك في كل مرحلة" | wardaty.app | iOS
+المميزات: تتبع الدورة + هجري، الحمل، العناية، وضع الشريك، القضاء، خصوصية
+الألوان: Coral #FF6B9D | Violet #8C64F0 | Pink #FF375F | Green #30D158
 
-# الجمهور (4 فئات)
+الجمهور:
 🌸 العزباء (15-30) → "اعرفي جسمك... افهمي نفسك"
 🌺 المتزوجة (20-40) → "خططي لمستقبلك... بثقة"
 💜 الأم (25-45) → "رفيقتك في أجمل رحلة"
 💙 الشريك → "افهمها... ادعمها... شاركها"
 
-# الهاشتاقات
-أساسية: #ورداتي #Wardaty #صحة_المرأة #تطبيق_عربي
-عزباء: #دورتي #صحتي #بنات #تتبع_الدورة
-متزوجة: #تخطيط_الحمل #خصوبة
-أم: #حامل #أمومة #رحلة_الحمل
-شريك: #زوج_داعم #علاقة_زوجية
+الهاشتاقات: #ورداتي #Wardaty #صحة_المرأة #تطبيق_عربي
 
-# قواعدك الصارمة
-1. نفّذ فوراً - لا تسأل "وش المنصة؟" أو "وش الفئة؟" - قدّم محتوى لكل المنصات إذا ما حُدد
-2. كل محتوى يتضمن: النص الكامل + الهاشتاقات + اقتراح الصورة/الفيديو + أفضل وقت للنشر + الفئة المستهدفة
-3. قدّم 3 نسخ مختلفة بأساليب متنوعة (عاطفي، تعليمي، فكاهي)
-4. المحتوى يكون جاهز للنسخ واللصق مباشرة
-5. راعي حدود الأحرف: تويتر 280، إنستقرام 2200، تيك توك 300
-6. كل بوست يبدأ بـ hook قوي يوقف المتصفح
-7. لا تكرر نفس الأفكار - كل مرة شي جديد ومبتكر
-8. النبرة: ودّية، تمكينية، ذكية - مو مبالغة ولا بارد
+قواعدك:
+1. نفّذ فوراً - لا تسأل أسئلة
+2. كل محتوى: النص + الهاشتاقات + اقتراح صورة + وقت النشر + الفئة
+3. قدّم 3 نسخ (عاطفي، تعليمي، فكاهي)
+4. جاهز للنسخ واللصق
+5. كل بوست يبدأ بـ hook قوي
+6. لا تكرر أفكار
 
-# أسلوبك
-- تتكلم عربي دائماً
-- تنفّذ مباشرة - ما تسأل، تنتج
-- محتوى بمستوى agency عالمي
-- كل إيموجي له سبب - مو عشوائي`,
+لما يطلب صورة بوست أو فيديو، أرجع JSON بهالتنسيق:
+للصور: {"type":"image","spec":{"title":"...","subtitle":"...","category":"...","bgColor":"#hex","accentColor":"#hex","style":"gradient|dark|light"}}
+للفيديو: {"type":"video","spec":{"slides":[{"title":"...","subtitle":"...","bgColor":"#hex","accentColor":"#hex"}],"duration":6}}
+
+ثم أضف النص التسويقي الكامل بعد الـ JSON.
+
+تتكلم عربي. تنفّذ مباشرة. محتوى بمستوى agency عالمي.`,
   },
 ];
 
-// Chat history per user (last 10 messages)
 const chatHistories = new Map();
+const activeChats = new Map();
 
 function getChatHistory(chatKey) {
-  if (!chatHistories.has(chatKey)) {
-    chatHistories.set(chatKey, []);
-  }
+  if (!chatHistories.has(chatKey)) chatHistories.set(chatKey, []);
   return chatHistories.get(chatKey);
 }
 
 function addToHistory(chatKey, role, content) {
   const history = getChatHistory(chatKey);
   history.push({ role, content });
-  // Keep last 10 messages
-  if (history.length > 20) {
-    history.splice(0, 2);
-  }
+  if (history.length > 20) history.splice(0, 2);
 }
 
 async function askClaude(systemPrompt, chatKey, userMessage) {
   addToHistory(chatKey, "user", userMessage);
-  const messages = getChatHistory(chatKey);
-
   const response = await anthropic.messages.create({
     model: "claude-opus-4-6",
     max_tokens: 4096,
     system: systemPrompt,
-    messages,
+    messages: getChatHistory(chatKey),
   });
-
   const reply = response.content[0].text;
   addToHistory(chatKey, "assistant", reply);
   return reply;
 }
 
+// Extract JSON media spec from Claude's response
+function extractMediaSpec(text) {
+  const jsonMatch = text.match(/\{[\s\S]*?"type"\s*:\s*"(image|video)"[\s\S]*?\}/);
+  if (!jsonMatch) return null;
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch {
+    return null;
+  }
+}
+
 function splitMessage(text, maxLength = 4000) {
-  if (text.length <= maxLength) return [text];
+  // Remove JSON specs from text for display
+  const cleanText = text.replace(/\{[\s\S]*?"type"\s*:\s*"(image|video)"[\s\S]*?\}/g, "").trim();
+  if (cleanText.length <= maxLength) return [cleanText];
   const parts = [];
-  let remaining = text;
+  let remaining = cleanText;
   while (remaining.length > 0) {
-    if (remaining.length <= maxLength) {
-      parts.push(remaining);
-      break;
-    }
-    let splitIndex = remaining.lastIndexOf("\n", maxLength);
-    if (splitIndex === -1 || splitIndex < maxLength / 2) splitIndex = maxLength;
-    parts.push(remaining.substring(0, splitIndex));
-    remaining = remaining.substring(splitIndex).trimStart();
+    if (remaining.length <= maxLength) { parts.push(remaining); break; }
+    let idx = remaining.lastIndexOf("\n", maxLength);
+    if (idx === -1 || idx < maxLength / 2) idx = maxLength;
+    parts.push(remaining.substring(0, idx));
+    remaining = remaining.substring(idx).trimStart();
   }
   return parts;
 }
 
-const activeChats = new Map();
-
 for (const config of BOTS) {
-  if (!config.token) {
-    console.warn(`⚠️  ${config.name}: No token, skipping`);
-    continue;
-  }
+  if (!config.token) { console.warn(`⚠️ ${config.name}: No token`); continue; }
 
   const bot = new TelegramBot(config.token, { polling: true });
-  console.log(`✅ ${config.name} bot started`);
+  console.log(`✅ ${config.name}`);
 
-  bot.onText(/\/start/, (msg) => {
-    bot.sendMessage(msg.chat.id, config.welcome);
-  });
-
+  bot.onText(/\/start/, (msg) => bot.sendMessage(msg.chat.id, config.welcome));
   bot.onText(/\/clear/, (msg) => {
-    const chatKey = `${config.name}-${msg.chat.id}`;
-    chatHistories.delete(chatKey);
-    bot.sendMessage(msg.chat.id, "🗑️ تم مسح المحادثة. ابدئي من جديد!");
+    chatHistories.delete(`${config.name}-${msg.chat.id}`);
+    bot.sendMessage(msg.chat.id, "🗑️ تم مسح المحادثة!");
   });
 
+  // Quick media commands
+  if (config.canMedia) {
+    bot.onText(/\/post (.+)/, async (msg, match) => {
+      const chatId = msg.chat.id;
+      bot.sendChatAction(chatId, "upload_photo");
+      try {
+        const buffer = await generatePostImage({ title: match[1], style: "gradient", bgColor: BRAND.violet, accentColor: BRAND.coral });
+        await bot.sendPhoto(chatId, buffer, { caption: `🌸 ${match[1]}\n\n#ورداتي #صحة_المرأة` });
+      } catch (e) {
+        bot.sendMessage(chatId, "❌ خطأ في إنشاء الصورة");
+      }
+    });
+
+    bot.onText(/\/story (.+)/, async (msg, match) => {
+      const chatId = msg.chat.id;
+      bot.sendChatAction(chatId, "upload_photo");
+      try {
+        const buffer = await generateStoryImage({ title: match[1], style: "gradient", bgColor: BRAND.coral, accentColor: BRAND.violet });
+        await bot.sendPhoto(chatId, buffer, { caption: `🌸 ${match[1]}` });
+      } catch (e) {
+        bot.sendMessage(chatId, "❌ خطأ في إنشاء الستوري");
+      }
+    });
+
+    bot.onText(/\/video (.+)/, async (msg, match) => {
+      const chatId = msg.chat.id;
+      bot.sendChatAction(chatId, "upload_video");
+      try {
+        const videoPath = await generateVideo({
+          slides: [
+            { title: match[1], subtitle: "صحتك. خصوصيتك. بأسلوبك.", bgColor: BRAND.violet, accentColor: BRAND.coral },
+            { title: "حمّلي وردتي الآن", subtitle: "wardaty.app", bgColor: BRAND.coral, accentColor: BRAND.violet },
+          ],
+          duration: 6,
+        });
+        await bot.sendVideo(chatId, videoPath, { caption: `🎬 ${match[1]}\n\n#ورداتي` });
+        cleanupTempDir(path.dirname(videoPath));
+      } catch (e) {
+        console.error("Video error:", e);
+        bot.sendMessage(chatId, "❌ خطأ في إنشاء الفيديو");
+      }
+    });
+  }
+
+  // Main message handler
   bot.on("message", async (msg) => {
     if (!msg.text || msg.text.startsWith("/")) return;
-
     const chatId = msg.chat.id;
     const chatKey = `${config.name}-${chatId}`;
 
     if (activeChats.has(chatKey)) {
-      bot.sendMessage(chatId, "⏳ اصبري، لسه أشتغل على طلبك السابق...");
+      bot.sendMessage(chatId, "⏳ لحظة...");
       return;
     }
 
     activeChats.set(chatKey, true);
     bot.sendChatAction(chatId, "typing");
-    const typingInterval = setInterval(() => {
-      bot.sendChatAction(chatId, "typing").catch(() => {});
-    }, 4000);
+    const typingInterval = setInterval(() => bot.sendChatAction(chatId, "typing").catch(() => {}), 4000);
 
     try {
       const response = await askClaude(config.system, chatKey, msg.text);
       clearInterval(typingInterval);
 
+      // Check if response contains media spec
+      if (config.canMedia) {
+        const mediaSpec = extractMediaSpec(response);
+        if (mediaSpec) {
+          try {
+            if (mediaSpec.type === "image") {
+              bot.sendChatAction(chatId, "upload_photo");
+              const buffer = await generatePostImage(mediaSpec.spec || {});
+              await bot.sendPhoto(chatId, buffer);
+            } else if (mediaSpec.type === "video") {
+              bot.sendChatAction(chatId, "upload_video");
+              const videoPath = await generateVideo(mediaSpec.spec || {});
+              await bot.sendVideo(chatId, videoPath);
+              cleanupTempDir(path.dirname(videoPath));
+            }
+          } catch (mediaErr) {
+            console.error("Media gen error:", mediaErr.message);
+          }
+        }
+      }
+
+      // Send text response
       const parts = splitMessage(response);
       for (const part of parts) {
-        await bot.sendMessage(chatId, part, { parse_mode: "Markdown" }).catch(() => {
-          bot.sendMessage(chatId, part);
-        });
+        if (part.trim()) {
+          await bot.sendMessage(chatId, part, { parse_mode: "Markdown" }).catch(() => bot.sendMessage(chatId, part));
+        }
       }
     } catch (error) {
       clearInterval(typingInterval);
-      console.error(`[${config.name}] Error:`, error.message);
+      console.error(`[${config.name}]`, error.message);
       bot.sendMessage(chatId, "❌ حصل خطأ. حاولي مرة ثانية.");
     } finally {
       activeChats.delete(chatKey);
@@ -231,4 +265,4 @@ for (const config of BOTS) {
   bot.on("polling_error", () => {});
 }
 
-console.log("\n🚀 All bots running!\n");
+console.log("🚀 All bots running!");
